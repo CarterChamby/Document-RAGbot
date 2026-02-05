@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from lfrom langchain_text_splitters import RecursiveCharacterTextSplitter
 
 st.set_page_config(page_title="Document RAGbot", page_icon="📄")
 
