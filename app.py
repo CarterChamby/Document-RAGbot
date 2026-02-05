@@ -1,33 +1,49 @@
 import streamlit as st
 import os
-from dotenv import load_dotenv
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# Load API keys from .env file
-load_dotenv()
-
-# Set up the Page Config (This makes the browser tab look nice)
-st.set_page_config(page_title="DocuMind AI", page_icon="📄")
+st.set_page_config(page_title="Document RAGbot", page_icon="📄")
 
 def main():
-    st.title("📄 DocuMind: Your Research Assistant")
-    st.subheader("Upload PDFs and ask questions")
+    st.title("PDF Ingestion & Chunking")
+    st.write("This prepares the document for the AI's 'memory'.")
 
-    # Sidebar for file uploads
-    with st.sidebar:
-        st.header("Upload Center")
-        uploaded_files = st.file_uploader("Choose PDF files", type="pdf", accept_multiple_files=True)
+    # 1. File Uploader
+    uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
+
+    if uploaded_file:
+        # We must save the uploaded file to a temporary local file 
+        # so the PyPDFLoader can access its path.
+        with open("temp.pdf", "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        # 2. Loading the PDF
+        # This converts the PDF format into a list of LangChain Document objects
+        loader = PyPDFLoader("temp.pdf")
+        pages = loader.load()
+
+        # 3. Splitting/Chunking
+        # 'chunk_size' is how many characters are in each piece.
+        # 'chunk_overlap' ensures the AI doesn't lose context between pieces.
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=150,
+            length_function=len
+        )
+        chunks = text_splitter.split_documents(pages)
+
+        # 4. Display Results
+        st.success(f"Successfully split the PDF into {len(chunks)} chunks!")
         
-        if st.button("Process Documents"):
-            if uploaded_files:
-                st.success("Files received! Ready for Phase 2.")
-            else:
-                st.error("Please upload at least one PDF.")
+        # Let's peek at what the AI sees
+        with st.expander("See Example Chunk"):
+            st.write(f"**Content of Chunk 1:**")
+            st.write(chunks[0].page_content)
+            st.write(f"**Metadata:** {chunks[0].metadata}")
 
-    # Chat interface placeholder
-    query = st.chat_input("Ask a question about your documents...")
-    if query:
-        st.chat_message("user").write(query)
-        st.chat_message("assistant").write("I'm ready to learn! Let's implement Phase 2 to get me thinking.")
+        # Clean up: delete the temp file so it doesn't clutter your project
+        os.remove("temp.pdf")
 
 if __name__ == "__main__":
     main()
